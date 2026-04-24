@@ -20,6 +20,14 @@ function extractTextContent(result: vscode.LanguageModelToolResult): string {
 		.join('');
 }
 
+/**
+ * Filters out Chromium/Electron stderr noise (DBus errors, GPU process errors,
+ * etc.) that can appear in terminal output on headless Linux CI.
+ */
+function stripChromiumStderr(output: string): string {
+	return output.split('\n').filter(line => !/^\[\d+:\d+\/\d+\.\d+:ERROR:/.test(line)).join('\n');
+}
+
 (vscode.env.uiKind === vscode.UIKind.Web ? suite.skip : suite)('chat - run_in_terminal', () => {
 
 	let disposables: vscode.Disposable[] = [];
@@ -381,7 +389,7 @@ function extractTextContent(result: vscode.LanguageModelToolResult): string {
 			// On headless Linux CI, Electron/Chromium may emit DBus stderr lines
 			// before the actual command output, so check the *last* line rather
 			// than requiring the whole trimmed buffer to start with '#'.
-			const lastLine = trimmed.split('\n').pop() ?? '';
+			const lastLine = stripChromiumStderr(trimmed).split('\n').pop() ?? '';
 			assert.ok(
 				lastLine.startsWith('#'),
 				`Expected a comment line from /etc/shells, got: ${trimmed}`
@@ -403,12 +411,12 @@ function extractTextContent(result: vscode.LanguageModelToolResult): string {
 			const marker = `SANDBOX_TMPDIR_${Date.now()}`;
 			const output = await invokeRunInTerminal(`echo "${marker}" > "$TMPDIR/${marker}.tmp" && cat "$TMPDIR/${marker}.tmp" && rm "$TMPDIR/${marker}.tmp"`);
 
-			// On headless Linux CI, Electron/Chromium may emit DBus stderr lines
-			// before the actual command output, so check the *last* line rather
-			// than requiring the entire trimmed output to equal the marker.
-			const trimmed = output.trim();
+			// On headless Linux CI, Electron/Chromium may emit DBus/GPU stderr
+			// lines around the actual command output, so strip them and check
+			// the last remaining line.
+			const trimmed = stripChromiumStderr(output.trim());
 			const lastLine = trimmed.split('\n').pop() ?? '';
-			assert.strictEqual(lastLine, marker, `Unexpected output: ${JSON.stringify(trimmed)}`);
+			assert.strictEqual(lastLine, marker, `Unexpected output: ${JSON.stringify(output.trim())}`);
 		});
 
 		test('non-allowlisted domains trigger unsandboxed confirmation flow', async function () {
