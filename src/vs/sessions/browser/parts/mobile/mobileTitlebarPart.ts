@@ -336,29 +336,38 @@ export class MobileTitlebarPart extends Disposable {
 			}
 		});
 
-		const panelContent = this.createPanelContent(panelStore);
-		const { left, width } = getDomNodePagePosition(this.accountButton);
-		const hoverWidget = this.hoverService.showInstantHover({
-			content: panelContent,
-			target: {
-				targetElements: [this.accountButton],
-				x: Math.max(0, left + width - MOBILE_ACCOUNT_PANEL_WIDTH),
-			},
-			additionalClasses: ['sessions-account-titlebar-panel-hover'],
-			position: { hoverPosition: HoverPosition.BELOW },
-			persistence: { sticky: true, hideOnHover: false },
-			appearance: { showPointer: false, skipFadeInAnimation: true, maxHeightRatio: 0.8 },
-		}, true);
-
-		if (hoverWidget) {
-			panelStore.add(hoverWidget);
-		}
-
-		panelStore.add(disposableWindowInterval(mainWindow, () => {
-			if (!panelContent.isConnected || hoverWidget?.isDisposed) {
-				this.accountPanelDisposable.clear();
+		// Defer to the next frame so the hover service's sticky mousedown
+		// listener (which dismisses the hover on clicks outside it) does
+		// not fire on the same pointer event that opened the panel.
+		requestAnimationFrame(() => {
+			if (panelStore.isDisposed) {
+				return;
 			}
-		}, 500));
+
+			const panelContent = this.createPanelContent(panelStore);
+			const { left, width } = getDomNodePagePosition(this.accountButton);
+			const hoverWidget = this.hoverService.showInstantHover({
+				content: panelContent,
+				target: {
+					targetElements: [this.accountButton],
+					x: Math.max(0, left + width - MOBILE_ACCOUNT_PANEL_WIDTH),
+				},
+				additionalClasses: ['sessions-account-titlebar-panel-hover'],
+				position: { hoverPosition: HoverPosition.BELOW },
+				persistence: { sticky: true, hideOnHover: false },
+				appearance: { showPointer: false, skipFadeInAnimation: true, maxHeightRatio: 0.8 },
+			}, true);
+
+			if (hoverWidget) {
+				panelStore.add(hoverWidget);
+			}
+
+			panelStore.add(disposableWindowInterval(mainWindow, () => {
+				if (!panelContent.isConnected || hoverWidget?.isDisposed) {
+					this.accountPanelDisposable.clear();
+				}
+			}, 500));
+		});
 	}
 
 	private createPanelContent(panelStore: DisposableStore): HTMLElement {
