@@ -398,3 +398,64 @@
 .agent-sessions-workbench.phone-layout .part.panel {
 	transition: none !important;
 }
+
+/* ---- Mobile Account Indicator ---- */
+
+.mobile-top-bar .mobile-account-indicator {
+	position: relative;
+}
+
+.mobile-top-bar .mobile-account-avatar {
+	display: none;
+	width: 28px;
+	height: 28px;
+	border-radius: 50%;
+	object-fit: cover;
+	border: 1px solid var(--vscode-commandCenter-border, transparent);
+	box-sizing: border-box;
+}
+
+.mobile-top-bar .mobile-account-avatar.visible {
+	display: block;
+}
+
+/* Hide the codicon when the avatar is loaded */
+.mobile-top-bar .mobile-account-indicator .codicon.hidden {
+	display: none;
+}
+
+.mobile-top-bar .mobile-account-badge {
+	position: absolute;
+	top: 8px;
+	right: 8px;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	border: 1.5px solid var(--vscode-editor-background);
+	background: var(--vscode-editorWarning-foreground);
+	pointer-events: none;
+}
+
+.mobile-top-bar .mobile-account-badge.dot-badge-warning {
+	background: var(--vscode-editorWarning-foreground);
+}
+
+.mobile-top-bar .mobile-account-badge.dot-badge-error {
+	background: var(--vscode-editorError-foreground);
+}
+
+/* Mobile-friendly adjustments for the account panel */
+.agent-sessions-workbench.phone-layout .sessions-account-titlebar-panel {
+	max-width: calc(100vw - 16px);
+}
+
+.agent-sessions-workbench.phone-layout .sessions-account-titlebar-panel-action {
+	min-height: 44px;
+	touch-action: manipulation;
+}
+
+.agent-sessions-workbench.phone-layout .sessions-account-titlebar-panel-header-action {
+	min-width: 44px;
+	min-height: 44px;
+	touch-action: manipulation;
+}
