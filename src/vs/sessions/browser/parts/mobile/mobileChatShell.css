@@ -445,8 +445,28 @@
 }
 
 /* Mobile-friendly adjustments for the account panel */
-.agent-sessions-workbench.phone-layout .sessions-account-titlebar-panel {
+.mobile-account-panel-backdrop {
+	position: fixed;
+	inset: 0;
+	z-index: 1000;
+	background: rgba(0, 0, 0, 0.25);
+	touch-action: manipulation;
+}
+
+.mobile-account-panel-dropdown {
+	position: absolute;
+	top: calc(48px + env(safe-area-inset-top));
+	right: 8px;
+	width: 280px;
 	max-width: calc(100vw - 16px);
+	max-height: calc(100vh - 64px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+	overflow-y: auto;
+	-webkit-overflow-scrolling: touch;
+	border-radius: 8px;
+	background: var(--vscode-editorHoverWidget-background, var(--vscode-editor-background));
+	border: 1px solid var(--vscode-editorHoverWidget-border, var(--vscode-contrastBorder, transparent));
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+	color: var(--vscode-foreground);
 }
 
 .agent-sessions-workbench.phone-layout .sessions-account-titlebar-panel-action {

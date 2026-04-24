@@ -5,7 +5,7 @@
 
 import './mobileChatShell.css';
 import { Disposable, DisposableStore, MutableDisposable, toDisposable } from '../../../../base/common/lifecycle.js';
-import { $, addDisposableListener, append, disposableWindowInterval, EventType, getDomNodePagePosition } from '../../../../base/browser/dom.js';
+import { $, addDisposableListener, append, disposableWindowInterval, EventType } from '../../../../base/browser/dom.js';
 import { mainWindow } from '../../../../base/browser/window.js';
 import { Emitter, Event } from '../../../../base/common/event.js';
 import { ThemeIcon } from '../../../../base/common/themables.js';
@@ -19,8 +19,6 @@ import { HiddenItemStrategy, MenuWorkbenchToolBar } from '../../../../platform/a
 import { IMenuService } from '../../../../platform/actions/common/actions.js';
 import { fillInActionBarActions } from '../../../../platform/actions/browser/menuEntryActionViewItem.js';
 import { IDefaultAccountService } from '../../../../platform/defaultAccount/common/defaultAccount.js';
-import { IHoverService } from '../../../../platform/hover/browser/hover.js';
-import { HoverPosition } from '../../../../base/browser/ui/hover/hoverWidget.js';
 import { renderLabelWithIcons } from '../../../../base/browser/ui/iconLabel/iconLabels.js';
 import { ISessionsManagementService } from '../../../services/sessions/common/sessionsManagement.js';
 import { IsNewChatSessionContext } from '../../../common/contextkeys.js';
@@ -28,8 +26,6 @@ import { Menus } from '../../menus.js';
 import { ChatEntitlementService, IChatEntitlementService } from '../../../../workbench/services/chat/common/chatEntitlementService.js';
 import { getAccountTitleBarState, getAccountProfileImageUrl, getAccountTitleBarBadgeKey } from '../../../contrib/accountMenu/browser/accountTitleBarState.js';
 import { ChatStatusDashboard } from '../../../../workbench/contrib/chat/browser/chatStatus/chatStatusDashboard.js';
-
-const MOBILE_ACCOUNT_PANEL_WIDTH = 280;
 
 /**
  * Mobile titlebar — prepended above the workbench grid on phone viewports
@@ -102,7 +98,6 @@ export class MobileTitlebarPart extends Disposable {
 		@IContextKeyService private readonly contextKeyService: IContextKeyService,
 		@IDefaultAccountService private readonly defaultAccountService: IDefaultAccountService,
 		@IChatEntitlementService private readonly chatEntitlementService: ChatEntitlementService,
-		@IHoverService private readonly hoverService: IHoverService,
 		@IMenuService private readonly menuService: IMenuService,
 	) {
 		super();
@@ -303,12 +298,10 @@ export class MobileTitlebarPart extends Disposable {
 
 	private showAccountPanel(): void {
 		if (this.isAccountMenuVisible) {
-			this.hoverService.hideHover(true);
 			this.accountPanelDisposable.clear();
 			return;
 		}
 
-		this.hoverService.hideHover(true);
 		this.accountPanelDisposable.clear();
 
 		const panelStore = new DisposableStore();
@@ -336,38 +329,17 @@ export class MobileTitlebarPart extends Disposable {
 			}
 		});
 
-		// Defer to the next frame so the hover service's sticky mousedown
-		// listener (which dismisses the hover on clicks outside it) does
-		// not fire on the same pointer event that opened the panel.
-		requestAnimationFrame(() => {
-			if (panelStore.isDisposed) {
-				return;
-			}
+		// Backdrop — covers the screen behind the panel to catch taps outside
+		const backdrop = append(this.element.ownerDocument.body, $('div.mobile-account-panel-backdrop'));
+		panelStore.add(toDisposable(() => backdrop.remove()));
+		panelStore.add(addDisposableListener(backdrop, EventType.CLICK, () => {
+			this.accountPanelDisposable.clear();
+		}));
 
-			const panelContent = this.createPanelContent(panelStore);
-			const { left, width } = getDomNodePagePosition(this.accountButton);
-			const hoverWidget = this.hoverService.showInstantHover({
-				content: panelContent,
-				target: {
-					targetElements: [this.accountButton],
-					x: Math.max(0, left + width - MOBILE_ACCOUNT_PANEL_WIDTH),
-				},
-				additionalClasses: ['sessions-account-titlebar-panel-hover'],
-				position: { hoverPosition: HoverPosition.BELOW },
-				persistence: { sticky: true, hideOnHover: false },
-				appearance: { showPointer: false, skipFadeInAnimation: true, maxHeightRatio: 0.8 },
-			}, true);
-
-			if (hoverWidget) {
-				panelStore.add(hoverWidget);
-			}
-
-			panelStore.add(disposableWindowInterval(mainWindow, () => {
-				if (!panelContent.isConnected || hoverWidget?.isDisposed) {
-					this.accountPanelDisposable.clear();
-				}
-			}, 500));
-		});
+		// Panel — positioned below the top bar, right-aligned
+		const panelContent = this.createPanelContent(panelStore);
+		panelContent.classList.add('mobile-account-panel-dropdown');
+		append(backdrop, panelContent);
 	}
 
 	private createPanelContent(panelStore: DisposableStore): HTMLElement {
@@ -395,7 +367,6 @@ export class MobileTitlebarPart extends Disposable {
 				panelStore.add(addDisposableListener(button, EventType.CLICK, async event => {
 					event.preventDefault();
 					event.stopPropagation();
-					this.hoverService.hideHover(true);
 					this.accountPanelDisposable.clear();
 					await Promise.resolve(action.run());
 				}));
@@ -424,7 +395,6 @@ export class MobileTitlebarPart extends Disposable {
 				panelStore.add(addDisposableListener(button, EventType.CLICK, async event => {
 					event.preventDefault();
 					event.stopPropagation();
-					this.hoverService.hideHover(true);
 					this.accountPanelDisposable.clear();
 					await Promise.resolve(action.run());
 				}));
